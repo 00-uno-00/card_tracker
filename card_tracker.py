@@ -59,7 +59,7 @@ def driver_start():
     options = webdriver.FirefoxOptions()
     options.add_argument('-no-sandbox')
     # options.add_argument(f'-user-agent={user_agent}')
-    # options.add_argument('-headless')  # Run Firefox in headless mode (no GUI)
+    options.add_argument('-headless')  # Run Firefox in headless mode (no GUI)
     # options.binary_location = '/usr/snap/firefox'  # Set the path to the Firefox binary
     driver = webdriver.Firefox(options=options)
     driver.get(r'https://www.cardtrader.com/')
@@ -329,7 +329,7 @@ if __name__ == "__main__":
     firefox, sleep = driver_start()
     firefox, sleep = login_CT(firefox, sleep)
     # Search for the card
-    print("strating search")
+    print("Starting search")
     filter = Filter("Indifferente", language=["EN", "IT"], condition="Near Mint", foil=False, tracked=True, continent=True, max_price=11)
     # print(search_CT(firefox, sleep, "Roaming Throne", filter))
     wishlist_search_CT(firefox, sleep, ["Roaming Throne"], filter)
