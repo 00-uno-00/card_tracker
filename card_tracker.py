@@ -26,10 +26,10 @@ class Card:
 
 @dataclass
 class Filter:
-    # expansion: str 
+    expansion: str 
     language: list # Inglese, Italiano, Tedesco, Francese, Spagnolo, Russo, Cinese, Giapponese, Portoghese change to your location language 
     condition: str # Near Mint, Lightly Played, Moderately Played, Heavily Played, Poor
-    foil: bool 
+    foil: bool
     tracked: bool
     continent: bool
     max_price: float
@@ -52,6 +52,7 @@ def driver_start():
 
 def login_CT(driver, wait):
     driver.get(r'https://www.cardtrader.com/users/sign_in?locale=it')
+    reject_cookies(driver)
     try:
         email_box = wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="login-modal-static"]//input[@data-test-id="login-input-email"]')))
         email_box.send_keys(usr_CT)
@@ -130,7 +131,7 @@ def search_CT(driver, wait, search_term, filter):
     # lowest_price.seller = seller.text
     return lowest_price
 
-def wishlist_search_CT(driver, wait, search_list):
+def wishlist_search_CT(driver, wait, search_list, filter):
     driver.get(r'https://www.cardtrader.com/wishlists/new/')
 
     wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'deck-table')))
@@ -140,8 +141,8 @@ def wishlist_search_CT(driver, wait, search_list):
     soup = bs4(html, 'html.parser')
 
     # Find the button by its class
-    buttons = wait.until(EC.presence_of_element_located((By.XPATH, "//a[text()='paste lists from your text files']")))
-    buttons.click()
+    buttons = driver.find_elements(By.CSS_SELECTOR, '.text-tertiary.hand')
+    driver.execute_script("arguments[0].click();", buttons[2])
 
     # Get the paste box
     paste_box = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "textarea[placeholder]")))
@@ -167,20 +168,24 @@ def wishlist_search_CT(driver, wait, search_list):
     # confirm_button.click()
     paste_box.send_keys(Keys.TAB, Keys.TAB, Keys.ENTER)
 
-    select_options_CM(driver, wait)    
+    select_options_CT(driver, wait, filter)    
 
     # Get all prices
+    wait.until(EC.invisibility_of_element((By.CSS_SELECTOR, '.fas.fa-spinner.fa-spin.fa-3x')))
     html = driver.page_source
     soup = bs4(html, 'html.parser')
 
     results = wait.until(EC.presence_of_all_elements_located((By.XPATH, "//h2[@class='m-0 text-center']")))
     for result in results:
-        print(result.text)
+        if float(result.text[1:]) > filter.max_price:
+            print("Price too high: "+result.text+"\n")
+        else:
+            print(result.text)
 
-def select_options_CT(driver, wait):
+def select_options_CT(driver, wait, filter):
     html = driver.page_source
     soup = bs4(html, 'html.parser')
-
+    
     check_all = wait.until(EC.presence_of_element_located((By.XPATH, '//input[@name="check_all"]')))
     check_all.click()
 
@@ -188,37 +193,51 @@ def select_options_CT(driver, wait):
     expansion = wait.until(EC.presence_of_element_located((By.XPATH, '//button[@id="setExpansionButton"]')))
     expansion.click()
 
-    any = wait.until(EC.visibility_of_element_located((By.XPATH, "//a[text()='Any']")))
+    any = wait.until(EC.presence_of_element_located((By.XPATH, f"//a[contains(text(), '"+filter.expansion+"')]")))
     any.click()
 
     # Set the language
     language = wait.until(EC.presence_of_element_located((By.XPATH, '//button[@id="setLanguageButton"]')))
     language.click()
 
-    english_option = wait.until(EC.visibility_of_element_located((By.XPATH, "//a[text()='EN']")))
-    english_option.click()
+    if len(filter.language) > 1:
+        lan_string = ""
+        for lan in filter.language:
+            lan_string += lan + "+"
+        lan_string = lan_string[:-1]
+        language_option = wait.until(EC.visibility_of_element_located((By.XPATH, "//a[text()='"+lan_string+"']")))
+        language_option.click()
+    else:
+        language_option = wait.until(EC.visibility_of_element_located((By.XPATH, "//a[text()='"+filter.language[0]+"']")))
+        language_option.click()
 
     # Set the condition
     condition = wait.until(EC.presence_of_element_located((By.XPATH, '//button[@id="setConditionButton"]')))
     condition.click()
 
-    nm_option = wait.until(EC.visibility_of_element_located((By.XPATH, "//a[text()='Near Mint']")))
+    nm_option = wait.until(EC.visibility_of_element_located((By.XPATH, "//a[text()='"+filter.condition+"']")))
     nm_option.click()
 
     # Set the Foil
     foil = wait.until(EC.presence_of_element_located((By.XPATH, "//button[@id='setFoilButton']")))
     foil.click()
 
-    foil_option = wait.until(EC.visibility_of_element_located((By.XPATH, "//a[text()='false']")))
-    foil_option.click()
+    if filter.foil:
+        foil_option = wait.until(EC.visibility_of_element_located((By.XPATH, "//a[text()='true']")))
+        foil_option.click()
+    else:
+        foil_option = wait.until(EC.visibility_of_element_located((By.XPATH, "//a[text()='false']")))
+        foil_option.click()
 
     # Set only Tracked Cards
-    tracked = wait.until(EC.visibility_of_element_located((By.XPATH, '//input[@id="only-tracked-checkbox"]')))
-    tracked.click()
+    if filter.tracked:
+        tracked = wait.until(EC.visibility_of_element_located((By.XPATH, '//input[@id="only-tracked-checkbox"]')))
+        tracked.click()
 
     # Set only User Continent 
-    continent = wait.until(EC.visibility_of_element_located((By.XPATH, '//input[@id="only-user-continent-checkbox"]')))
-    continent.click()
+    if filter.continent:
+        continent = wait.until(EC.visibility_of_element_located((By.XPATH, '//input[@id="only-user-continent-checkbox"]')))
+        continent.click()
 
     # Optimize the search
     optimize = wait.until(EC.visibility_of_element_located((By.XPATH, "//button[@class='btn btn-lg btn-success btn-block nowrap ml-3 ml-md-0']")))
@@ -280,15 +299,23 @@ def filter_card(filter, row):
         
     return True
 
+def reject_cookies(driver):
+    # Assuming `driver` is your WebDriver object
+    # Replace 'css_selector' with the actual CSS selector for the button
+    wait = WebDriverWait(driver, 10)
+    reject_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, '.iubenda-cs-reject-btn.iubenda-cs-btn-primary')))
+
+    reject_button.click()
+
 if __name__ == "__main__":
 
     firefox, sleep = driver_start()
     firefox, sleep = login_CT(firefox, sleep)
     # Search for the card
     print("strating search")
-    filter = Filter(language=["Inglese", "Italiano"], condition="Near Mint", foil=False, tracked=True, continent=True, max_price=11)
-    print(search_CT(firefox, sleep, "Roaming Throne", filter))
-    # wishlist_search(firefox, sleep, ["Roaming Throne", "Cultivate", "Sol Ring"])
+    filter = Filter("Indifferente", language=["EN", "IT"], condition="Near Mint", foil=False, tracked=True, continent=True, max_price=11)
+    # print(search_CT(firefox, sleep, "Roaming Throne", filter))
+    wishlist_search_CT(firefox, sleep, ["Roaming Throne"], filter)
     # req_CM()
 
     # Close the element window
