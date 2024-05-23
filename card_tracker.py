@@ -16,8 +16,10 @@
 #   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import os
+import re
 import shutil
 from dataclasses import dataclass
+import requests
 from selenium import webdriver
 from selenium.webdriver import Firefox
 from selenium.webdriver.common.by import By
@@ -59,11 +61,11 @@ def driver_start():
     options = webdriver.FirefoxOptions()
     options.add_argument('-no-sandbox')
     # options.add_argument(f'-user-agent={user_agent}')
-    options.add_argument('-headless')  # Run Firefox in headless mode (no GUI)
+    # options.add_argument('-headless')  # Run Firefox in headless mode (no GUI)
     # options.binary_location = '/usr/snap/firefox'  # Set the path to the Firefox binary
     driver = webdriver.Firefox(options=options)
     driver.get(r'https://www.cardtrader.com/')
-    wait = WebDriverWait(driver, 30)    # Set a wait timer before timing out
+    wait = WebDriverWait(driver, 60)    # Set a wait timer before timing out
     print("Driver started")
     return driver, wait
 
@@ -205,8 +207,9 @@ def select_options_CT(driver, wait, filter):
     
     check_all = wait.until(EC.presence_of_element_located((By.XPATH, '//input[@name="check_all"]')))
     check_all.click()
+    wait_mod_windows(driver)
 
-    # Set the expansion 
+    # Set the expansion
     expansion = wait.until(EC.presence_of_element_located((By.XPATH, '//button[@id="setExpansionButton"]')))
     expansion.click()
 
@@ -324,15 +327,25 @@ def reject_cookies(driver):
 
     reject_button.click()
 
+def wait_mod_windows(driver):
+    wait = WebDriverWait(driver, 10)
+    wait.until(EC.invisibility_of_element_located((By.CSS_SELECTOR, '.btn btn-link text-secondary')))
+
+def file_read(file):
+    with open(file, 'r') as f:
+        lines = f.read().splitlines()
+        return lines
+
 if __name__ == "__main__":
 
     firefox, sleep = driver_start()
     firefox, sleep = login_CT(firefox, sleep)
     # Search for the card
     print("Starting search")
-    filter = Filter("Indifferente", language=["EN", "IT"], condition="Near Mint", foil=False, tracked=True, continent=True, max_price=11)
+    filter = Filter("Indifferente", language=["EN", "IT"], condition="Near Mint", foil=False, tracked=True, continent=True, max_price=50)
     # print(search_CT(firefox, sleep, "Roaming Throne", filter))
-    wishlist_search_CT(firefox, sleep, ["Roaming Throne"], filter)
+    lista = file_read("kekw.txt")
+    wishlist_search_CT(firefox, sleep, lista, filter)
     # req_CM()
 
     # Close the element window
