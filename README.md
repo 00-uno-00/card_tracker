@@ -1,11 +1,6 @@
-# GitHubAuthBot
+# Card Tracker
 
 A simple script to search [cardtrader](https://www.cardtrader.com) for a specific card or group of cards at the best price according to the specified filters.
-
-## Features
-
-- Single card 
-- Easy to configure permissions and repositries  
 
 ## Setup and Deployment
 
